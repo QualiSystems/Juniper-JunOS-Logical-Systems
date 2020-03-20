@@ -1,4 +1,5 @@
-from cloudshell.cli.configurator import AbstractModeConfigurator
+from cloudshell.networking.juniper.cli.juniper_cli_configurator import JuniperCliConfigurator
+
 
 class _LSConfManager(object):
     def __init__(self):
@@ -11,16 +12,14 @@ class _LSConfManager(object):
         pass
 
 
-class LSConfigurator(AbstractModeConfigurator):
+class LSConfigurator(JuniperCliConfigurator):
 
-    def __init__(self, base_configurator, ls_name):
-        self.base_configurator = base_configurator
+    def __init__(self, ls_name, cli, resource_config, logger):
+        super().__init__(cli, resource_config, logger)
         self.ls_name = ls_name
 
     def enable_mode_service(self):
         pass
-
-
 
     def config_mode_service(self):
         pass

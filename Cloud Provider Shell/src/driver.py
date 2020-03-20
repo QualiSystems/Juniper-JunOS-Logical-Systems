@@ -352,29 +352,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         :param vrf_management_name: VRF management Name
         :return str saved configuration file name:
         """
-        with LoggingSessionContext(context) as logger:
-            api = CloudShellSessionContext(context).get_api()
-
-            resource_config = NetworkingResourceConfig.from_context(
-                self.SHELL_NAME,
-                context,
-                api,
-                self.SUPPORTED_OS,
-            )
-            cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
-
-            if not configuration_type:
-                configuration_type = 'running'
-
-            if not vrf_management_name:
-                vrf_management_name = resource_config.vrf_management_name
-
-            configuration_operations = JuniperConfigurationFlow(resource_config, logger, cli_configurator)
-            logger.info('Save started')
-            response = configuration_operations.save(folder_path=folder_path, configuration_type=configuration_type,
-                                                     vrf_management_name=vrf_management_name)
-            logger.info('Save completed')
-            return response
+        pass
 
     # @GlobalLock.lock
     def restore(self, context, ports, path, configuration_type, restore_method, vrf_management_name):
@@ -386,34 +364,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         :param restore_method: append or override methods
         :param vrf_management_name: VRF management Name
         """
-        with LoggingSessionContext(context) as logger:
-            api = CloudShellSessionContext(context).get_api()
-
-            resource_config = NetworkingResourceConfig.from_context(
-                self.SHELL_NAME,
-                context,
-                api,
-                self.SUPPORTED_OS,
-            )
-            cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
-
-            if not configuration_type:
-                configuration_type = 'running'
-
-            if not restore_method:
-                restore_method = 'override'
-
-            if not vrf_management_name:
-                vrf_management_name = resource_config.vrf_management_name
-
-            configuration_operations = JuniperConfigurationFlow(
-                resource_config, logger, cli_configurator
-            )
-            logger.info('Restore started')
-            configuration_operations.restore(path=path, restore_method=restore_method,
-                                             configuration_type=configuration_type,
-                                             vrf_management_name=vrf_management_name)
-            logger.info('Restore completed')
+        pass
 
     def ApplyConnectivityChanges(self, context, request):
         """
