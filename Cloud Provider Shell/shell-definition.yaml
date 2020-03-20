@@ -1,0 +1,114 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+metadata:
+  template_name: Juniper LS Cloud Provider
+  template_author: Anonymous
+  template_version: 0.1.0
+  template_icon: shell-icon.png
+
+description: >
+ Juniper Logical-Systems Cloud Provider
+
+imports:
+  - cloudshell_standard: cloudshell_cloud_provider_standard_1_0_0.yaml
+
+node_types:
+ vendor.resource.Juniper LS Cloud Provider:
+    derived_from: cloudshell.nodes.CustomCloudProvider
+    capabilities:
+    
+      concurrent_command_capability:
+        type: cloudshell.capabilities.SupportConcurrentCommands
+        
+      auto_discovery_capability:
+        type: cloudshell.capabilities.AutoDiscovery
+        properties:        
+          enable_auto_discovery:
+            type: boolean
+            default: true
+          auto_discovery_description:
+            type: string
+            default: Describe the auto discovery
+          inventory_description:
+            type: string
+            default: Describe the resource shell template
+          hide_address:
+            type: string
+            default: false
+          User:
+            description: User with administrative privileges
+            type: string
+          Password:
+            description: The password is required by some CLI protocols such as Telnet and is required according to the device configuration.
+            type: cloudshell.datatypes.Password
+          Enable Password:
+            description: The enable password is required by some CLI protocols such as Telnet and is required according to the device configuration.
+            type: cloudshell.datatypes.Password
+          Sessions Concurrency Limit:
+            description: The maximum number of concurrent sessions that the driver will open to the device. Default is 1 (no concurrency).
+            type: integer
+            default: 1
+          CLI Connection Type:
+            type: string
+            description: The CLI connection type that will be used by the driver. Possible values are Auto, Console, SSH, Telnet and TCP. If Auto is selected the driver will choose the available connection type automatically. Default value is Auto.
+            default: Auto
+          CLI TCP Port:
+            description: TCP Port to user for CLI connection. If kept empty a default CLI port will be used based on the chosen protocol, for example Telnet will use port 23.
+            type: integer
+            default: 0
+
+#          ## Attributes available from the cloud provider standard
+#          Region:
+#            type: string
+#            default: ''
+#          Networks in use:
+#            type: string
+#            default: ''
+#          VLAN Type:
+#            type: string
+#            default: 'VLAN'
+#          Networking type:
+#            type: string
+#            default: 'L2'
+#
+#          ## Adding custom attributes to the cloud provider discovery form
+#          my_custom_attribute:
+#            type: string
+#            default:
+
+#    ## Custom attributes definition
+    properties:
+      User:
+        description: User with administrative privileges
+        type: string
+      Password:
+        description: The password is required by some CLI protocols such as Telnet and is required according to the device configuration.
+        type: cloudshell.datatypes.Password
+      Enable Password:
+        description: The enable password is required by some CLI protocols such as Telnet and is required according to the device configuration.
+        type: cloudshell.datatypes.Password
+      Sessions Concurrency Limit:
+        description: The maximum number of concurrent sessions that the driver will open to the device. Default is 1 (no concurrency).
+        type: integer
+        default: 1
+      CLI Connection Type:
+        type: string
+        description: The CLI connection type that will be used by the driver. Possible values are Auto, Console, SSH, Telnet and TCP. If Auto is selected the driver will choose the available connection type automatically. Default value is Auto.
+        default: Auto
+      CLI TCP Port:
+        description: TCP Port to user for CLI connection. If kept empty a default CLI port will be used based on the chosen protocol, for example Telnet will use port 23.
+        type: integer
+        default: 0
+
+    artifacts:
+      icon:
+        file: shell-icon.png
+        type: tosca.artifacts.File
+      driver:
+        file: JuniperJunosLogicalSystemsDriver.zip
+        type: tosca.artifacts.File
+      deployment:
+        file: Deployments.zip
+        type: tosca.artifacts.File
+
+

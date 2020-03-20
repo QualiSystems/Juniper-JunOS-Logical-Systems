@@ -1,0 +1,37 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+metadata:
+  template_name: Juniper LS Cloud Provider
+  template_author: Anonymous
+  template_version: 0.1.0
+  template_icon: shell-icon.png
+
+description: >
+  Deploy Logical-Systems instance
+
+imports:
+  - cloudshell_standard: cloudshell_cloud_provider_standard_1_0_0.yaml
+
+node_types:
+
+  vendor.resource.Juniper Logical Systems:
+    derived_from: cloudshell.nodes.CustomDeploymentOption
+
+#    ## custom attributes example for deployment option
+    properties:
+        VR Name:
+          type: string
+          description: VR Name
+          default: ''
+          tags: [user_input]
+
+#        Interface:
+#          type: string
+#          default:
+#          description: "Interface name, coma separated. Example: ge-0/1/1, ge-0/1/2"
+#          tags: [user_input]
+
+    artifacts:
+      icon:
+        file: shell-icon.png
+        type: tosca.artifacts.File

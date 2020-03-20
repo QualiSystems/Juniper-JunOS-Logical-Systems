@@ -1,0 +1,77 @@
+<Driver Description="" MainClass="driver.JuniperLSCloudProviderDriver" Name="JuniperLSCloudProviderDriver"
+        PythonVersion="3" Version="1.0.0">
+    <Layout>
+        <Category Name="Connectivity">
+            <Command Description="" DisplayName="Refresh IP" EnableCancellation="true" Name="remote_refresh_ip"
+                     Tags="remote_connectivity,allow_shared"/>
+            <Command Description="" DisplayName="Apply Connectivity Changes" Name="ApplyConnectivityChanges"
+                     Tags="allow_unreserved"/>
+            <!--            <Command Description="" DisplayName="Prepare Connectivity" EnableCancellation="true" Name="PrepareSandboxInfra" Tags="allow_unreserved" />-->
+            <!--            <Command Description="" DisplayName="Cleanup Connectivity" EnableCancellation="true" Name="CleanupSandboxInfra" Tags="allow_unreserved" />-->
+        </Category>
+        <Category Name="Hidden Commands">
+            <Command Description="" DisplayName="Power Cycle" Name="PowerCycle" Tags="power"/>
+            <Command Description="" DisplayName="Delete Instance" Name="DeleteInstance"
+                     Tags="remote_app_management,allow_shared"/>
+            <Command Description="" DisplayName="Deploy" Name="Deploy" Tags="allow_unreserved"/>
+            <Command Description="" DisplayName="Set App Security Groups" Name="SetAppSecurityGroups"
+                     Tags="allow_unreserved"/>
+            <Command Description="" DisplayName="Get VmDetails" Name="GetVmDetails" Tags="allow_unreserved"/>
+        </Category>
+        <Category Name="Power">
+            <Command Description="" DisplayName="Power On" Name="PowerOn" Tags="power"/>
+            <Command Description="" DisplayName="Power Off" Name="PowerOff" Tags="power"/>
+        </Category>
+        <Category Name="Command">
+            <Command Name="run_custom_command" DisplayName="run_custom_command"
+                     Description="Executes any custom command entered in the input on the device."
+                     Tags="remote_connectivity,allow_shared">
+                <Parameters>
+                    <Parameter Name="custom_command" Type="String" Mandatory="True" DisplayName="Custom Command"
+                               DefaultValue=""
+                               Description="The command to run. Note that commands that require a response are not supported."/>
+                </Parameters>
+            </Command>
+            <Command Name="run_custom_config_command" DisplayName="run_custom_config_command"
+                     Description="Executes any custom config command entered in the input on the device."
+                     Tags="remote_connectivity,allow_shared">
+                <Parameters>
+                    <Parameter Name="custom_command" Type="String" Mandatory="True" DisplayName="Custom Command"
+                               DefaultValue=""
+                               Description="The command to run. Note that commands that require a response are not supported."/>
+                </Parameters>
+            </Command>
+        </Category>
+        <Command Name="save" DisplayName="Save" Tags="remote_connectivity,allow_shared" Description="Create and save a configuration file">
+            <Parameters>
+                <Parameter Name="configuration_type" Type="Lookup" AllowedValues="Startup,Running" Mandatory="False"
+                           DefaultValue=""
+                           DisplayName="Configuration Type"
+                           Description="The type of configuration that will be saved. Possible values are StartUp and Running. If kept empty the default configuration type that will be used is Running."/>
+                <Parameter Name="folder_path" Type="String" Mandatory="False" DisplayName="Folder Path" DefaultValue=""
+                           Description="The path in which the configuration file will be saved. Shouldn't include the name of the file but only the folder. This input is optional and if empty the value will be taken from the 'Backup Location' attribute on the root resource. The path should include the protocol type, for TFTP use 'tftp://server_address/folder1', for FTP use 'ftp://username:password@server_address/folder1'."/>
+                <Parameter Name="vrf_management_name" Type="String" Mandatory="False" DisplayName="VRF Management Name"
+                           DefaultValue=""
+                           Description="Optional. Virtual Routing and Forwarding is used to share same/overlapping sub-net on the same core. Service Providers use it to share their backbone with multiple customers and also assign a management VRF which they use to manage the devices. If kept empty the value in the 'VRF Management Name' attribute on the root model will be used."/>
+            </Parameters>
+        </Command>
+
+        <Command Name="restore" DisplayName="Restore" Tags="remote_connectivity,allow_shared" Description="Restores a configuration file">
+            <Parameters>
+                <Parameter Name="path" Type="String" Mandatory="True" DefaultValue="" DisplayName="Path"
+                           Description="The path to the configuration file, including the configuration file name. The path should include the protocol type, for TFTP use 'tftp://asdf', for FTP use 'ftp://username:password@server_address/folder1/file1.bin'."/>
+                <Parameter Name="configuration_type" Type="Lookup" AllowedValues="Startup,Running" Mandatory="False"
+                           DefaultValue=""
+                           DisplayName="Configuration Type"
+                           Description="The type of configuration that will be saved. Possible values are StartUp and Running. If kept empty the default configuration type that will be used is Running."/>
+                <Parameter Name="restore_method" Type="Lookup" AllowedValues="Override,Append" Mandatory="False"
+                           DefaultValue=""
+                           DisplayName="Restore Method"
+                           Description="The restore method to use when restoring the configuration file. Possible Values are Append and Override. If kept empty the restore method will be Override."/>
+                <Parameter Name="vrf_management_name" Type="String" Mandatory="False" DisplayName="VRF Management Name"
+                           DefaultValue=""
+                           Description="Optional. Virtual Routing and Forwarding is used to share same/overlapping sub-net on the same core. Service Providers use it to share their backbone with multiple customers and also assign a management VRF which they use to manage the devices. If kept empty the value in the 'VRF Management Name' attribute on the root model will be used."/>
+            </Parameters>
+        </Command>
+    </Layout>
+</Driver>
