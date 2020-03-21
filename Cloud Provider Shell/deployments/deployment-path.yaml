@@ -18,12 +18,12 @@ node_types:
     derived_from: cloudshell.nodes.CustomDeploymentOption
 
 #    ## custom attributes example for deployment option
-    properties:
-        VR Name:
-          type: string
-          description: VR Name
-          default: ''
-          tags: [user_input]
+#    properties:
+#        VR Name:
+#          type: string
+#          description: VR Name
+#          default: ''
+#          tags: [user_input]
 
 #        Interface:
 #          type: string

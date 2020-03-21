@@ -7,22 +7,22 @@ metadata:
   template_icon: shell-icon.png
 
 description: >
- Juniper Logical-Systems Cloud Provider
+  Juniper Logical-Systems Cloud Provider
 
 imports:
   - cloudshell_standard: cloudshell_cloud_provider_standard_1_0_0.yaml
 
 node_types:
- vendor.resource.Juniper LS Cloud Provider:
+  vendor.resource.Juniper LS Cloud Provider:
     derived_from: cloudshell.nodes.CustomCloudProvider
     capabilities:
-    
+
       concurrent_command_capability:
         type: cloudshell.capabilities.SupportConcurrentCommands
-        
+
       auto_discovery_capability:
         type: cloudshell.capabilities.AutoDiscovery
-        properties:        
+        properties:
           enable_auto_discovery:
             type: boolean
             default: true
@@ -57,26 +57,26 @@ node_types:
             type: integer
             default: 0
 
-#          ## Attributes available from the cloud provider standard
-#          Region:
-#            type: string
-#            default: ''
-#          Networks in use:
-#            type: string
-#            default: ''
-#          VLAN Type:
-#            type: string
-#            default: 'VLAN'
-#          Networking type:
-#            type: string
-#            default: 'L2'
-#
-#          ## Adding custom attributes to the cloud provider discovery form
-#          my_custom_attribute:
-#            type: string
-#            default:
+    #          ## Attributes available from the cloud provider standard
+    #          Region:
+    #            type: string
+    #            default: ''
+    #          Networks in use:
+    #            type: string
+    #            default: ''
+    #          VLAN Type:
+    #            type: string
+    #            default: 'VLAN'
+    #          Networking type:
+    #            type: string
+    #            default: 'L2'
+    #
+    #          ## Adding custom attributes to the cloud provider discovery form
+    #          my_custom_attribute:
+    #            type: string
+    #            default:
 
-#    ## Custom attributes definition
+    #    ## Custom attributes definition
     properties:
       User:
         description: User with administrative privileges
@@ -99,6 +99,22 @@ node_types:
         description: TCP Port to user for CLI connection. If kept empty a default CLI port will be used based on the chosen protocol, for example Telnet will use port 23.
         type: integer
         default: 0
+      Backup Location:
+        description: Used by the save/restore orchestration to determine where backups should be saved.
+        type: string
+      Backup Type:
+        description: Supported protocols for saving and restoring of configuration and firmware files. Possible values are 'File System' 'FTP' and 'TFTP'. Default value is 'File System'.
+        type: string
+        default: File System
+      Backup User:
+        description: Username for the storage server used for saving and restoring of configuration and firmware files.
+        type: string
+      Backup Password:
+        description: Password for the storage server used for saving and restoring of configuration and firmware files.
+        type: cloudshell.datatypes.Password
+      VRF Management Name:
+        description: The default VRF Management to use if configured in the network and no such input was passed to the Save or Restore command.
+        type: string
 
     artifacts:
       icon:

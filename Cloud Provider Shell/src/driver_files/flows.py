@@ -61,17 +61,17 @@ class CreateRemoveLSFlow:
                 commit_rollback.rollback()
                 raise
 
-    def send_ls_command(self, ls_name, command):
-        with self._cli_configurator.enable_mode_service() as enable_service:
-            with enable_service.enter_mode(LSCommandMode(ls_name)) as enable_ls_service:
-                return self._ls_send_command(enable_ls_service, command)
-
-    def send_ls_config_command(self, ls_name, command):
-        with self._cli_configurator.enable_mode_service() as enable_service:
-            with enable_service.enter_mode(LSCommandMode(ls_name)) as enable_ls_service:
-                with enable_ls_service.enter_mode(LSConfigCommandMode(ls_name)) as config_ls_service:
-                    return self._ls_send_command(config_ls_service, command)
-
-    def _ls_send_command(self, session, command, separator=";"):
-        return os.linesep.join(map(lambda cmd: session.send_command(cmd, remove_command_from_output=False),
-                                   command.strip(separator).split(separator)))
+    # def send_ls_command(self, ls_name, command):
+    #     with self._cli_configurator.enable_mode_service() as enable_service:
+    #         with enable_service.enter_mode(LSCommandMode(ls_name)) as enable_ls_service:
+    #             return self._ls_send_command(enable_ls_service, command)
+    #
+    # def send_ls_config_command(self, ls_name, command):
+    #     with self._cli_configurator.enable_mode_service() as enable_service:
+    #         with enable_service.enter_mode(LSCommandMode(ls_name)) as enable_ls_service:
+    #             with enable_ls_service.enter_mode(LSConfigCommandMode(ls_name)) as config_ls_service:
+    #                 return self._ls_send_command(config_ls_service, command)
+    #
+    # def _ls_send_command(self, session, command, separator=";"):
+    #     return os.linesep.join(map(lambda cmd: session.send_command(cmd, remove_command_from_output=False),
+    #                                command.strip(separator).split(separator)))

@@ -34,9 +34,3 @@ SHOW_LS = CommandTemplate(
     action_map=ACTION_MAP,
     error_map=ERROR_MAP,
 )
-
-SAVE = CommandTemplate('save "{dst_path}"', action_map=ACTION_MAP, error_map=_ERROR_MAP)
-
-RESTORE = CommandTemplate(
-    'load {restore_type} "{src_path}"', action_map=ACTION_MAP, error_map=_ERROR_MAP
-)

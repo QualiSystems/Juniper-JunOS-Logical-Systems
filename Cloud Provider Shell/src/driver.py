@@ -1,4 +1,5 @@
 import json
+import os
 from random import randint
 
 import jsonpickle
@@ -20,6 +21,11 @@ from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionCo
 from cloudshell.shell.flows.connectivity.basic_flow import AbstractConnectivityFlow
 
 from cloudshell.networking.juniper.cli.juniper_cli_configurator import JuniperCliConfigurator
+from cloudshell.networking.juniper.flows.configuration_flow import JuniperConfigurationFlow
+from cloudshell.shell.flows.command.basic_flow import RunCommandFlow
+
+from driver_files.cli.cli import BackToEnableCLI
+from driver_files.cli.configurator import LSConfigurator
 from driver_files.flows import CreateRemoveLSFlow
 from driver_files.resource_config import JuniperCPResourceConfig
 
@@ -39,7 +45,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         ctor must be without arguments, it is created with reflection at run time
         """
         self.request_parser = DriverRequestParser()
-        self._cli = None
+        self._session_pool = None
 
     def initialize(self, context):
         """
@@ -53,7 +59,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         """
         resource_config = JuniperCPResourceConfig.from_context(self.SHELL_NAME, context)
         session_pool_size = int(resource_config.sessions_concurrency_limit)
-        self._cli = CLI(SessionPoolManager(max_pool_size=session_pool_size, pool_timeout=100))
+        self._session_pool = SessionPoolManager(max_pool_size=session_pool_size, pool_timeout=100)
         return 'Finished initializing'
 
     # <editor-fold desc="Mandatory Commands">
@@ -116,7 +122,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
             logger.info(request)
             api = CloudShellSessionContext(context).get_api()
             resource_config = JuniperCPResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
-            cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
+            cli_configurator = JuniperCliConfigurator(CLI(self._session_pool), resource_config, logger)
 
             ls_flow = CreateRemoveLSFlow(cli_configurator, logger)
 
@@ -192,34 +198,48 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         return int_names
 
     def run_custom_command(self, context, ports, custom_command):
+        """Send custom command
+
+        :param ResourceCommandContext context: ResourceCommandContext object with all Resource Attributes inside
+        :return: result
+        :rtype: str
+        """
         with LoggingSessionContext(context) as logger:
             api = CloudShellSessionContext(context).get_api()
+
             resource_config = JuniperCPResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
-            cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-            ls_flow = CreateRemoveLSFlow(cli_configurator, logger)
-
-            output = ""
+            response = ""
             for endpoint in context.remote_endpoints:
                 res_details = api.GetResourceDetails(endpoint.name)
                 ls_name = self._extract_attribute(res_details.VmDetails.InstanceData, self.ATTRIBUTE.LS_NAME)
-                output += ls_flow.send_ls_command(ls_name, custom_command)
-            return output
+                ls_cli_configurator = LSConfigurator(ls_name, self._session_pool, resource_config, logger)
+
+                send_command_operations = RunCommandFlow(logger, ls_cli_configurator)
+                response += send_command_operations.run_custom_command(custom_command)
+            return response
 
     def run_custom_config_command(self, context, ports, custom_command):
+        """Send custom command in configuration mode
+
+        :param ResourceCommandContext context: ResourceCommandContext object with all Resource Attributes inside
+        :return: result
+        :rtype: str
+        """
         with LoggingSessionContext(context) as logger:
             api = CloudShellSessionContext(context).get_api()
+
             resource_config = JuniperCPResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
-            cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-            ls_flow = CreateRemoveLSFlow(cli_configurator, logger)
-
-            output = ""
+            response = ""
             for endpoint in context.remote_endpoints:
                 res_details = api.GetResourceDetails(endpoint.name)
                 ls_name = self._extract_attribute(res_details.VmDetails.InstanceData, self.ATTRIBUTE.LS_NAME)
-                output += ls_flow.send_ls_config_command(ls_name, custom_command)
-            return output
+                ls_cli_configurator = LSConfigurator(ls_name, self._session_pool, resource_config, logger)
+
+                send_command_operations = RunCommandFlow(logger, ls_cli_configurator)
+                response += send_command_operations.run_custom_config_command(custom_command)
+            return response
 
     def PowerOn(self, context, ports):
         """
@@ -280,7 +300,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
                 # deployment_service = refresh_request["appRequestJson"]["deploymentService"][
                 #     "name"]
                 resource_details = api.GetResourceDetails(vm_name)
-                logger.info(yaml.dump(resource_details))
+                # logger.info(yaml.dump(resource_details))
                 ls_name = self._extract_attribute(resource_details.VmDetails.InstanceData, self.ATTRIBUTE.LS_NAME)
                 logger.info("LS Name: {}".format(ls_name))
                 vm_inst_data = [VmDetailsProperty(self.ATTRIBUTE.LS_NAME, ls_name)]
@@ -325,7 +345,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         with LoggingSessionContext(context) as logger:
             api = CloudShellSessionContext(context).get_api()
             resource_config = JuniperCPResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
-            cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
+            cli_configurator = JuniperCliConfigurator(CLI(self._session_pool), resource_config, logger)
 
             ls_flow = CreateRemoveLSFlow(cli_configurator, logger)
 
@@ -352,7 +372,31 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         :param vrf_management_name: VRF management Name
         :return str saved configuration file name:
         """
-        pass
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
+
+            resource_config = JuniperCPResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
+
+            if not configuration_type:
+                configuration_type = 'running'
+
+            if not vrf_management_name:
+                vrf_management_name = resource_config.vrf_management_name
+
+            response = ""
+            for endpoint in context.remote_endpoints:
+                res_details = api.GetResourceDetails(endpoint.name)
+                ls_name = self._extract_attribute(res_details.VmDetails.InstanceData, self.ATTRIBUTE.LS_NAME)
+                ls_cli_configurator = LSConfigurator(ls_name, self._session_pool, resource_config, logger)
+
+                configuration_operations = JuniperConfigurationFlow(resource_config, logger, ls_cli_configurator)
+                logger.info('Save started')
+                response += configuration_operations.save(folder_path=folder_path,
+                                                          configuration_type=configuration_type,
+                                                          vrf_management_name=vrf_management_name) + os.linesep
+                logger.info('Save completed')
+
+            return response
 
     # @GlobalLock.lock
     def restore(self, context, ports, path, configuration_type, restore_method, vrf_management_name):
@@ -364,7 +408,33 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         :param restore_method: append or override methods
         :param vrf_management_name: VRF management Name
         """
-        pass
+        with LoggingSessionContext(context) as logger:
+            api = CloudShellSessionContext(context).get_api()
+
+            resource_config = JuniperCPResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
+
+            if not configuration_type:
+                configuration_type = 'running'
+
+            if not restore_method:
+                restore_method = 'override'
+
+            if not vrf_management_name:
+                vrf_management_name = resource_config.vrf_management_name
+
+            for endpoint in context.remote_endpoints:
+                res_details = api.GetResourceDetails(endpoint.name)
+                ls_name = self._extract_attribute(res_details.VmDetails.InstanceData, self.ATTRIBUTE.LS_NAME)
+                ls_cli_configurator = LSConfigurator(ls_name, self._session_pool, resource_config, logger)
+
+                configuration_operations = JuniperConfigurationFlow(
+                    resource_config, logger, ls_cli_configurator
+                )
+                logger.info('Restore for LS {} started'.format(ls_name))
+                configuration_operations.restore(path=path, restore_method=restore_method,
+                                                 configuration_type=configuration_type,
+                                                 vrf_management_name=vrf_management_name)
+                logger.info('Restore for LS {} completed'.format(ls_name))
 
     def ApplyConnectivityChanges(self, context, request):
         """
@@ -384,10 +454,10 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
         """
         with LoggingSessionContext(context) as logger:
             connectivity_flow = LSConnectivityFlow(logger)
-            logger.info('Start applying connectivity changes, request is: {0}'.format(str(request)))
+            # logger.info('Start applying connectivity changes, request is: {0}'.format(str(request)))
             result = connectivity_flow.apply_connectivity_changes(request=request)
-            logger.info('Finished applying connectivity changes, response is: {0}'.format(str(result)))
-            logger.info('Apply Connectivity changes completed')
+            # logger.info('Finished applying connectivity changes, response is: {0}'.format(str(result)))
+            # logger.info('Apply Connectivity changes completed')
             return result
 
     # </editor-fold> 
