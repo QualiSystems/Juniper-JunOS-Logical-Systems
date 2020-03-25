@@ -1,9 +1,7 @@
 import json
 import os
-from random import randint
 
 import jsonpickle
-import yaml
 from cloudshell.cli.service.cli import CLI
 from cloudshell.cli.service.session_pool_manager import SessionPoolManager
 
@@ -12,11 +10,9 @@ from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterf
 from cloudshell.cp.core.models import DriverResponse, DeployAppResult, VmDetailsData, VmDetailsProperty
 from cloudshell.shell.core.driver_context import AutoLoadDetails
 
-# from data_model import *  # run 'shellfoundry generate' to generate data model classes
 from cloudshell.shell.core.session.logging_session import LoggingSessionContext
 
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
-# from cloudshell.shell.standards.networking.resource_config import NetworkingResourceConfig
 
 from cloudshell.shell.flows.connectivity.basic_flow import AbstractConnectivityFlow
 
@@ -24,7 +20,6 @@ from cloudshell.networking.juniper.cli.juniper_cli_configurator import JuniperCl
 from cloudshell.networking.juniper.flows.configuration_flow import JuniperConfigurationFlow
 from cloudshell.shell.flows.command.basic_flow import RunCommandFlow
 
-from driver_files.cli.cli import BackToEnableCLI
 from driver_files.cli.configurator import LSConfigurator
 from driver_files.flows import CreateRemoveLSFlow
 from driver_files.resource_config import JuniperCPResourceConfig
@@ -135,11 +130,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
                 app_name = deploy_action.actionParams.appName
                 int_list = self._get_int_names(reservation_details, app_name)
                 logger.info("{}:{}".format(app_name, str(int_list)))
-                # int_list = ["ge-0/0/4"]
                 vm_uuid = self._build_uuid(app_name, context.reservation.reservation_id)
-                # vm_id = "{}-{}".format(app_name, inst_id)
-                # ls_name = deploy_action.actionParams.deployment.attributes.get(
-                #     'Juniper Junos Logical Systems.VR for Interface.VR Name') or "{}-{}".format("VR", inst_id)
                 ls_name = "VR-{}".format(vm_uuid)
                 vm_name = "{}-{}".format(app_name, ls_name)
                 int_list = ls_flow.create_ls(ls_name, int_list)
@@ -151,14 +142,6 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
                                       range(len(int_list))]
                 vm_instance_data.extend(vm_interfaces_data)
 
-                # vm_nic_list = []
-                # for int_name in int_list:
-                #     vm_nic = VmDetailsNetworkInterface()
-                #     vm_nic.interfaceId = int_name
-                #     vm_nic.networkId = "Net-{}".format(int_name)
-                #     vm_nic.networkData.append(VmDetailsProperty("vNIC Name", int_name))
-                #     vm_nic_list.append(vm_nic)
-
                 deploy_result = DeployAppResult(actionId=deploy_action.actionId,
                                                 infoMessage="Deployment Completed Successfully",
                                                 vmUuid=vm_uuid,
@@ -166,10 +149,8 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
                                                 deployedAppAddress="",
                                                 deployedAppAttributes=[],
                                                 vmDetailsData=VmDetailsData(vm_instance_data))
-                # vmDetailsData=VmDetailsData(vm_instance_data, vm_nic_list))
 
                 results.append(deploy_result)
-                pass
             return DriverResponse(results).to_driver_response_json()
 
     def _build_uuid(self, app_name, reservation_id):

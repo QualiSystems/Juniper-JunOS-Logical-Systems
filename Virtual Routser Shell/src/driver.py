@@ -1,17 +1,10 @@
 import re
 
-import yaml
-
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 from cloudshell.shell.core.driver_context import InitCommandContext, ResourceCommandContext, AutoLoadResource, \
     AutoLoadAttribute, AutoLoadDetails, CancellationContext
-# from data_model import *  # run 'shellfoundry generate' to generate data model classes
-# from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 from cloudshell.shell.core.session.logging_session import LoggingSessionContext
-
-
-# from cloudshell.shell.standards.networking.resource_config import NetworkingResourceConfig
 
 
 class JuniperVirtualRouterShellDriver(ResourceDriverInterface):
@@ -59,11 +52,7 @@ class JuniperVirtualRouterShellDriver(ResourceDriverInterface):
 
         with LoggingSessionContext(context) as logger:
             api = CloudShellSessionContext(context).get_api()
-            # resources = api.GetResourceList()
-            # for res in resources:
             res_det = api.GetResourceDetails(context.resource.name)
-            # interfaces = self._get_int_names(res_det, context.resource.name)
-            # interfaces = []
             ports = []
             attributes = []
             for param in res_det.VmDetails.InstanceData:
@@ -76,32 +65,7 @@ class JuniperVirtualRouterShellDriver(ResourceDriverInterface):
                     attributes.append(
                         AutoLoadAttribute(str(int_id), "{}.{}".format(self.PORT_MODEL_NAME, "Requested vNIC Name"),
                                           int_name))
-            # logger.info(yaml.dump(context, default_flow_style=False, allow_unicode=True, encoding=None))
-            # for connector in context.connectors:
-            # logger.info("Interfaces: {}".format(interfaces))
-            # logger.info("Target: {}".format(connector.Target))
-
-            # resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context, api)
-
         return AutoLoadDetails(ports, attributes)
-
-    # def _extract_attribute(self, attributes, name):
-    #     for attr in attributes:
-    #         if attr.Name == name:
-    #             return attr.Value
-    #
-    # def _get_int_names(self, res_details, app_name):
-    #     int_names = []
-    #     for connector in res_details.Connectors:
-    #         if app_name == connector.Source:
-    #             int_names.append(self._extract_attribute(connector.Attributes, 'Requested Source vNIC Name'))
-    #         if app_name == connector.Target:
-    #             int_names.append(self._extract_attribute(connector.Attributes, 'Requested Target vNIC Name'))
-    #     return int_names
-
-    # </editor-fold>
-
-    # <editor-fold desc="Orchestration Save and Restore Standard">
 
     def orchestration_save(self, context, cancellation_context, mode, custom_params):
         """
