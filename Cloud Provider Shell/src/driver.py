@@ -130,6 +130,9 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
                 app_name = deploy_action.actionParams.appName
                 int_list = self._get_int_names(reservation_details, app_name)
                 logger.info("{}:{}".format(app_name, str(int_list)))
+                if not int_list:
+                    raise Exception("Failed to deploy Logical System without interfaces. "
+                                    "Please create appropriate connections")
                 vm_uuid = self._build_uuid(app_name, context.reservation.reservation_id)
                 ls_name = "VR-{}".format(vm_uuid)
                 vm_name = "{}-{}".format(app_name, ls_name)

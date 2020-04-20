@@ -61,7 +61,7 @@ class JuniperVirtualRouterShellDriver(ResourceDriverInterface):
                     int_name = param.Value
                     int_id = match.group(1)
                     ports.append(
-                        AutoLoadResource(self.PORT_MODEL_NAME, "Port {}".format(int_id), str(int_id)))
+                        AutoLoadResource(self.PORT_MODEL_NAME, int_name.replace("/", "-"), str(int_id)))
                     attributes.append(
                         AutoLoadAttribute(str(int_id), "{}.{}".format(self.PORT_MODEL_NAME, "Requested vNIC Name"),
                                           int_name))
