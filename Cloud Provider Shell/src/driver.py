@@ -1,7 +1,9 @@
 import json
 import os
+import uuid
 
 import jsonpickle
+from cloudshell.api.cloudshell_api import AttributeNameValue
 from cloudshell.cli.service.cli import CLI
 from cloudshell.cli.service.session_pool_manager import SessionPoolManager
 
@@ -92,7 +94,7 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
 
         If App deployment fails, return a "success false" action result.
 
-        :param ResourceCommandContext context:
+        :param cloudshell.shell.core.driver_context.ResourceCommandContext context:
         :param str request: A JSON string with the list of requested deployment actions
         :param CancellationContext cancellation_context:
         :return:
@@ -128,42 +130,44 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
             results = []
             for deploy_action in actions:
                 app_name = deploy_action.actionParams.appName
-                int_list = self._get_int_names(reservation_details, app_name)
-                logger.info("{}:{}".format(app_name, str(int_list)))
-                if not int_list:
+
+                int_dict = self._get_int_names(reservation_details, app_name)
+                logger.info("{}:{}".format(app_name, str(int_dict)))
+                if not int_dict:
                     raise Exception("Failed to deploy Logical System without interfaces. "
                                     "Please create appropriate connections")
-                vm_uuid = self._build_uuid(app_name, context.reservation.reservation_id)
-                ls_name = "VR-{}".format(vm_uuid)
-                vm_name = "{}-{}".format(app_name, ls_name)
-                int_list = ls_flow.create_ls(ls_name, int_list)
+
+                vm_name = "{}-{}-".format(app_name.replace(" ", "-"),
+                                            context.reservation.reservation_id[-2:])
+                vm_uuid = uuid.uuid4().hex[:4]
+                vm_name += vm_uuid
+
+                while ls_flow.check_ls_name_exist(vm_name):
+                    vm_uuid = uuid.uuid4().hex[:4]
+                    vm_name += vm_uuid
+                reserved_int_list = self._get_reserved_ports(api, reservation_details, app_name, context.resource.name)
+                deployed_int_dict = ls_flow.create_ls(vm_name, int_dict, reserved_int_list)
                 vm_instance_data = [
-                    VmDetailsProperty(self.ATTRIBUTE.INST_UUID, vm_uuid),
-                    VmDetailsProperty(self.ATTRIBUTE.LS_NAME, ls_name),
+                    # VmDetailsProperty(self.ATTRIBUTE.INST_UUID, vm_uuid),
+                    VmDetailsProperty(self.ATTRIBUTE.LS_NAME, vm_name),
                 ]
-                vm_interfaces_data = [VmDetailsProperty("vNIC {} Name".format(i), int_list[i]) for i in
-                                      range(len(int_list))]
+                vm_interfaces_data = [VmDetailsProperty("vNIC {} Name".format(list(deployed_int_dict.keys()).index(i)),
+                                                        deployed_int_dict.get(i)) for i in deployed_int_dict]
+                connectors_to_update = {k: v for k, v in deployed_int_dict.items() if v != int_dict.get(k)}
+                self._update_connectors(api, context.reservation.reservation_id, connectors_to_update)
+
                 vm_instance_data.extend(vm_interfaces_data)
 
                 deploy_result = DeployAppResult(actionId=deploy_action.actionId,
                                                 infoMessage="Deployment Completed Successfully",
                                                 vmUuid=vm_uuid,
                                                 vmName=vm_name,
-                                                deployedAppAddress="",
+                                                deployedAppAddress=resource_config.address,
                                                 deployedAppAttributes=[],
                                                 vmDetailsData=VmDetailsData(vm_instance_data))
 
                 results.append(deploy_result)
             return DriverResponse(results).to_driver_response_json()
-
-    def _build_uuid(self, app_name, reservation_id):
-        app_id = 0
-        try:
-            app_id = int(app_name.split("_")[-1])
-        except ValueError:
-            pass
-
-        return "{}-{}".format(reservation_id[-4:], str(app_id).zfill(2))
 
     def _extract_attribute(self, attributes, name):
         for attr in attributes:
@@ -171,15 +175,37 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
                 return attr.Value
 
     def _get_int_names(self, reserv_details, app_name):
-        int_names = []
-        # logger.info(yaml.dump(res_details.Connectors))
-        # logger.info(app_name)
+        int_names = {}
         for connector in reserv_details.Connectors:
             if app_name == connector.Source:
-                int_names.append(self._extract_attribute(connector.Attributes, self.ATTRIBUTE.VNIC_SOURCE))
+                int_names[connector] = self._extract_attribute(connector.Attributes, self.ATTRIBUTE.VNIC_SOURCE)
             if app_name == connector.Target:
-                int_names.append(self._extract_attribute(connector.Attributes, self.ATTRIBUTE.VNIC_TARGET))
+                int_names[connector] = self._extract_attribute(connector.Attributes, self.ATTRIBUTE.VNIC_TARGET)
         return int_names
+
+    def _update_connectors(self, api, reservation_id, int_names):
+        for connector, port in int_names.items():
+            attrs = connector.Attributes
+            attrs.append(AttributeNameValue("Requested Source vNIC Name", port))
+            api.SetConnectorAttributes(reservation_id, connector.Source, connector.Target, attrs)
+
+    def _get_reserved_ports(self, api, reserv_details, app_name, cp_name):
+        reserved_ports = []
+        for ls_app in reserv_details.Apps:
+            if app_name != ls_app.Name and ls_app.DeploymentPaths[0].DeploymentService.CloudProvider == cp_name:
+                reserved_ports.extend(self._get_int_names(reserv_details, ls_app.Name).keys())
+        for ls_resource in reserv_details.Resources:
+            if ls_resource.VmDetails and ls_resource.VmDetails.CloudProviderFullName == cp_name:
+                reserved_ports.extend(
+                    [port.Value for port in ls_resource.VmDetails.InstanceData if port.Name.lower().startswith("vnic")])
+            resource_details = api.GetResourceDetails(ls_resource.Name)
+            for res_info in resource_details.ChildResources:
+                vnic = self._extract_attribute(res_info.ResourceAttributes,
+                                           'Juniper Virtual Router Shell.GenericVPort.Requested vNIC Name')
+                if vnic and vnic not in reserved_ports:
+                    reserved_ports.append(vnic)
+
+        return list(filter(lambda x: x, reserved_ports))
 
     def run_custom_command(self, context, ports, custom_command):
         """Send custom command
@@ -288,11 +314,11 @@ class JuniperLSCloudProviderDriver(ResourceDriverInterface):
                 ls_name = self._extract_attribute(resource_details.VmDetails.InstanceData, self.ATTRIBUTE.LS_NAME)
                 logger.info("LS Name: {}".format(ls_name))
                 vm_inst_data = [VmDetailsProperty(self.ATTRIBUTE.LS_NAME, ls_name)]
-                for res_info in resource_details.ChildResources:
-                    port_name = res_info.Name
-                    vnic = self._extract_attribute(res_info.ResourceAttributes,
-                                                   'Juniper Virtual Router Shell.GenericVPort.Requested vNIC Name')
-                    vm_inst_data.append(VmDetailsProperty(port_name, vnic))
+                # for res_info in resource_details.ChildResources:
+                #     port_name = res_info.Name
+                #     vnic = self._extract_attribute(res_info.ResourceAttributes,
+                #                                    'Juniper Virtual Router Shell.GenericVPort.Requested vNIC Name')
+                #     vm_inst_data.append(VmDetailsProperty(port_name, vnic))
                 vm_details_data.append(VmDetailsData(vm_inst_data, [], vm_name))
             return str(jsonpickle.encode(vm_details_data, unpicklable=False))
 

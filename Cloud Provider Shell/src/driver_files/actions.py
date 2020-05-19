@@ -34,14 +34,18 @@ class LogicalSystemsActions(object):
             self._cli_service, command_template.SHOW_ALL_INTERFACES).execute_command()
         return self._parse_interfaces(output)
 
+    def get_ls_names(self):
+        output = CommandTemplateExecutor(
+            self._cli_service, command_template.SHOW_LS).execute_command()
+        return output
+
     def get_conf_int_list(self):
         output = CommandTemplateExecutor(
             self._cli_service, command_template.SHOW_INTERFACES).execute_command()
         return self._parse_interfaces(output)
 
     def get_ls_int_list(self):
-        output = CommandTemplateExecutor(
-            self._cli_service, command_template.SHOW_LS).execute_command()
+        output = self.get_ls_names()
         return self._parse_interfaces(output)
 
     @staticmethod

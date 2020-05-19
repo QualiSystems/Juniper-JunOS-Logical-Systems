@@ -18,10 +18,9 @@ class CreateRemoveLSFlow:
         self._logger = logger
         self._cli_configurator = cli_configurator
 
-    def create_ls(self, ls_name, int_list):
+    def create_ls(self, ls_name, int_list, reserved_int_list):
         with self._cli_configurator.enable_mode_service() as enable_session:
             sys_int_list = LogicalSystemsActions(enable_session, self._logger).get_int_list()
-
         with self._cli_configurator.config_mode_service() as config_session:
             ls_actions = LogicalSystemsActions(config_session, self._logger)
             commit_rollback = CommitRollbackActions(config_session, self._logger)
@@ -29,23 +28,28 @@ class CreateRemoveLSFlow:
             config_int_list = ls_actions.get_conf_int_list()
             ls_int_list = ls_actions.get_ls_int_list()
             used_int_list = ls_int_list | config_int_list
-            avail_int_list = sorted(sys_int_list - used_int_list - {i for i in int_list if i}, reverse=True)
+            avail_int_list = sorted(sys_int_list - used_int_list - set(reserved_int_list) - {i for i in int_list if i},
+                                     reverse=True)
 
-            if len([i for i in int_list if not i]) > len(avail_int_list):
-                raise Exception("Not enough available interfaces")
-            int_list = {i if i else avail_int_list.pop() for i in int_list}
+            # int_list = {i if i else avail_int_list.pop() for i in int_list}
+            deployed_ports_dict = {}
+            for connector, interface in int_list.items():
+                if not interface:
+                    interface = avail_int_list.pop()
 
-            not_available_list = set(int_list) & used_int_list
+                deployed_ports_dict[connector] = interface
+
+            not_available_list = set(deployed_ports_dict.values()) & used_int_list
             if not_available_list:
                 raise Exception("Interfaces {}, cannot be used.".format(str(not_available_list)))
 
-            if not int_list.issubset(sys_int_list):
-                raise Exception("Interface names is not correct {}".format(int_list - sys_int_list))
+            if not set(deployed_ports_dict.values()).issubset(sys_int_list):
+                raise Exception("Interface names are not correct {}".format(list(deployed_ports_dict.values())))
 
             try:
-                ls_actions.create_ls(ls_name, int_list)
+                ls_actions.create_ls(ls_name, list(deployed_ports_dict.values()))
                 commit_rollback.commit()
-                return list(int_list)
+                return deployed_ports_dict
             except CommandExecutionException:
                 commit_rollback.rollback()
                 raise
@@ -55,11 +59,18 @@ class CreateRemoveLSFlow:
             ls_actions = LogicalSystemsActions(cli_service, self._logger)
             commit_rollback = CommitRollbackActions(cli_service, self._logger)
             try:
+                pass
                 ls_actions.remove_ls(ls_name)
                 commit_rollback.commit()
             except CommandExecutionException:
                 commit_rollback.rollback()
                 raise
+
+    def check_ls_name_exist(self, ls_name):
+        with self._cli_configurator.config_mode_service() as cli_service:
+            ls_actions = LogicalSystemsActions(cli_service, self._logger)
+            if ls_name in ls_actions.get_ls_names():
+                return True
 
     # def send_ls_command(self, ls_name, command):
     #     with self._cli_configurator.enable_mode_service() as enable_service:

@@ -23,7 +23,7 @@
             <Command Description="" DisplayName="Power Off" Name="PowerOff" Tags="power"/>
         </Category>
         <Category Name="Command">
-            <Command Name="run_custom_command" DisplayName="run_custom_command"
+            <Command Name="run_custom_command" DisplayName="Run Custom Command"
                      Description="Executes any custom command entered in the input on the device."
                      Tags="remote_connectivity,allow_shared">
                 <Parameters>
@@ -32,7 +32,7 @@
                                Description="The command to run. Note that commands that require a response are not supported."/>
                 </Parameters>
             </Command>
-            <Command Name="run_custom_config_command" DisplayName="run_custom_config_command"
+            <Command Name="run_custom_config_command" DisplayName="Run Custom Config Command"
                      Description="Executes any custom config command entered in the input on the device."
                      Tags="remote_connectivity,allow_shared">
                 <Parameters>
